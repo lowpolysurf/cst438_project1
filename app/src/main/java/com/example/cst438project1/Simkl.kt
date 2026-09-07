@@ -35,15 +35,14 @@ interface SimklApiService{
         @Query("q") query: String,
 
         // Adds the API client ID as the "client_id"
-        @Query("client_id") cliendId: String
+        @Query("client_id") clientId: String
     ): List<SimklMedia>
 }
 
 // Creates and stores the API client
 object SimklClient{
     private const val BASE_URL = "https://api.simkl.com/"
-    // TODO: Update this
-    const val CLIENT_ID = "WHY DO I NEED TO CREATE AN ACCOUNT FOR THIS?"
+    const val CLIENT_ID = "f0ed39a21b7a9c850615b0b9180fb4ae8fdd92c48a931c66e859a55ec16e25a2"
 
     // Creates the API service when it is used for the first time
     // "by lazy" prevents Retrofit from being initialized unnecessarily
