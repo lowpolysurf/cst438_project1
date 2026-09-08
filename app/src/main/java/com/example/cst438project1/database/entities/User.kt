@@ -1,10 +1,14 @@
 package com.example.cst438project1.database.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 // Create a database table named "user_table"
-@Entity(tableName = "user_table")
+@Entity(
+    tableName = "user_table",
+    indices = [Index(value = ["username"], unique = true)]
+)
 data class User(
 
     @PrimaryKey(autoGenerate = true)

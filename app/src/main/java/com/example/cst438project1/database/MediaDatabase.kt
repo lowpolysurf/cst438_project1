@@ -6,11 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.cst438project1.database.entities.MediaItem
-import retrofit2.Converter
+import com.example.cst438project1.database.Converters
 import java.util.concurrent.Executors
 
 @Database(entities = [MediaItem::class], version = 1, exportSchema = false)
-@TypeConverters(Converter::class)
+@TypeConverters(Converters::class)
 abstract class MediaDatabase : RoomDatabase(){
 
     // Gives the app access to the MediaDAO
