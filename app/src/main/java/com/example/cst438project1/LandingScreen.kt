@@ -1,78 +1,187 @@
 package com.example.cst438project1
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-//import androidx.compose.runtime.Composable will be replaced by the import below it
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LandingScreen(
     username: String,
-    onLogout: () -> Unit) {
-    // variables needed
+    onLogout: () -> Unit
+) {
+    // --- Search feature state ---
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<SimklMedia>>(emptyList()) }
+    var isSearching by rememberSaveable { mutableStateOf(false) }
+    var searchError by rememberSaveable { mutableStateOf<String?>(null) }
+    var hasSearched by rememberSaveable { mutableStateOf(false) }
+
+    // --- Lucky Search feature state ---
+    var isLuckyLoading by remember { mutableStateOf(false) }
+    var luckySuggestion by remember { mutableStateOf<SimklMedia?>(null) }
+
     val coroutineScope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
-    var suggestion by remember { mutableStateOf<SimklMedia?>(null) }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-
-
-    ) {
-        // space modifier for the button
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "You're logged in, $username!",
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = {
-            isLoading = true
-            suggestion = null
-            coroutineScope.launch {
-                suggestion = LuckySearch.getRandomSuggestion()
-                isLoading = false
-            }
-        }) {
-            Text("🍀 Lucky Search")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isLoading) {
-            CircularProgressIndicator()
-        }
-
-        suggestion?.let { media ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Username header + logout
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = media.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    media.year?.let { year ->
-                        Text(text = "Year: $year")
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = username, modifier = Modifier.weight(1f))
+                    Button(onClick = onLogout) {
+                        Text("Log Out")
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onLogout) {
-            Text("Log Out")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Search bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search media") },
+                    singleLine = true
+                )
+
+                // Search + Lucky Search buttons side by side
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val query = searchQuery.trim()
+                            coroutineScope.launch {
+                                isSearching = true
+                                searchError = null
+                                hasSearched = true
+
+                                try {
+                                    searchResults = withContext(Dispatchers.IO) {
+                                        listOf("movie", "tv", "anime")
+                                            .map { type ->
+                                                async {
+                                                    SimklClient.api.searchMedia(
+                                                        type = type,
+                                                        query = query,
+                                                        clientId = SimklClient.CLIENT_ID
+                                                    )
+                                                }
+                                            }
+                                            .awaitAll()
+                                            .flatten()
+                                            .distinctBy { "${it.title}-${it.year}-${it.ids?.simkl}" }
+                                    }
+                                } catch (exception: Exception) {
+                                    searchResults = emptyList()
+                                    searchError = "Unable to load media. Please try again."
+                                } finally {
+                                    isSearching = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = searchQuery.isNotBlank() && !isSearching
+                    ) {
+                        Text("Search Media")
+                    }
+
+                    Button(
+                        onClick = {
+                            isLuckyLoading = true
+                            luckySuggestion = null
+                            coroutineScope.launch {
+                                luckySuggestion = LuckySearch.getRandomSuggestion()
+                                isLuckyLoading = false
+                            }
+                        },
+                        enabled = !isLuckyLoading
+                    ) {
+                        Text("🍀 Lucky")
+                    }
+                }
+
+                if (isLuckyLoading) {
+                    CircularProgressIndicator()
+                }
+
+                luckySuggestion?.let { media ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = media.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            media.year?.let { year -> Text(text = "Year: $year") }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                Text(
+                    text = "Media List",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) {
+                    when {
+                        isSearching -> item { CircularProgressIndicator() }
+                        searchError != null -> item { Text(searchError!!) }
+                        searchResults.isEmpty() -> item {
+                            Text(
+                                if (hasSearched) "No matching media found."
+                                else "Search results will appear here."
+                            )
+                        }
+                        else -> items(
+                            items = searchResults,
+                            key = { media -> "${media.title}-${media.year}-${media.ids?.simkl}" }
+                        ) { media ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(text = media.title, style = MaterialTheme.typography.titleMedium)
+                                    Text("Year: ${media.year ?: "Unknown"}")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
