@@ -1,14 +1,18 @@
 package com.example.cst438project1
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 // '?' means the variable can be NULL
 // These are the IDs from the API
 data class SimklIds(
+    // SIMKL may return this ID as either "simkl" or "simkl_id" depending on the endpoint.
+    @SerializedName(value = "simkl", alternate = ["simkl_id"])
     val simkl: Int?,
     val slug: String?,
     val imdb: String?,
@@ -26,6 +30,7 @@ data class SimklMedia(
 // Defines the API requests that the application can make
 interface SimklApiService{
     // Sends request to BASE_URL/search/{type}
+    @Headers("User-Agent: cst438project1/1.0")
     @GET("search/{type}")
     suspend fun searchMedia(
         // Path replaces the {type} with "movie", "tv" or "anime"
@@ -35,7 +40,12 @@ interface SimklApiService{
         @Query("q") query: String,
 
         // Adds the API client ID as the "client_id"
-        @Query("client_id") clientId: String
+        @Query("client_id") clientId: String,
+        // Identifies this Android app to SIMKL.
+        @Query("app-name") appName: String = SimklClient.APP_NAME,
+
+        // Sends the app version required by the SIMKL search API.
+        @Query("app-version") appVersion: String = SimklClient.APP_VERSION
     ): List<SimklMedia>
 }
 
@@ -43,6 +53,8 @@ interface SimklApiService{
 object SimklClient{
     private const val BASE_URL = "https://api.simkl.com/"
     const val CLIENT_ID = "f0ed39a21b7a9c850615b0b9180fb4ae8fdd92c48a931c66e859a55ec16e25a2"
+    const val APP_NAME = "cst438project1"
+    const val APP_VERSION = "1.0"
 
     // Creates the API service when it is used for the first time
     // "by lazy" prevents Retrofit from being initialized unnecessarily
