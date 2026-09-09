@@ -48,3 +48,37 @@ private val LUCKY_SEARCH_TERMS = listOf(
     "batman", "friends", "naruto", "inception", "the office",
     "attack on titan", "star wars", "breaking bad", "spirited away", "the matrix"
 )
+
+
+private val LUCKY_MEDIA_TYPES = listOf("movie", "tv", "anime")
+
+// Hardcoded placeholder shown if the real API call doesn't work
+
+val PLACEHOLDER_SUGGESTION = SimklMedia(
+    title = "Mystery Movie Night (placeholder for now)",
+    year = null,
+    ids = null,
+    poster = null
+)
+
+object LuckySearch {
+    // Picks a random search term/type, queries the real Simkl API
+    // one random result is output from the api but will use placeholder if api fails
+    suspend fun getRandomSuggestion(): SimklMedia {
+        return try {
+            val randomType = LUCKY_MEDIA_TYPES.random()
+            val randomTerm = LUCKY_SEARCH_TERMS.random()
+
+            val results = SimklClient.api.searchMedia(
+                type = randomType,
+                query = randomTerm,
+                clientId = SimklClient.CLIENT_ID
+            )
+
+            results.randomOrNull() ?: PLACEHOLDER_SUGGESTION
+        } catch (e: Exception) {
+            // Network error, API down, unexpected response, etc.
+            PLACEHOLDER_SUGGESTION
+        }
+    }
+}
