@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                     RegisterScreen(
                         // After registering, user is directed back to LoginScreen.kt
                         onRegisterSuccess = {
-                        navController.popBackStack()
+                            navController.popBackStack()
                         }
                     )
                 }
