@@ -8,10 +8,7 @@ import retrofit2.http.Headers
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-// '?' means the variable can be NULL
-// These are the IDs from the API
 data class SimklIds(
-    // SIMKL may return this ID as either "simkl" or "simkl_id" depending on the endpoint.
     @SerializedName(value = "simkl", alternate = ["simkl_id"])
     val simkl: Int?,
     val slug: String?,
@@ -19,7 +16,6 @@ data class SimklIds(
     val tmdb: String?
 )
 
-// This is the media type (Movie or TV show) from API
 data class SimklMedia(
     val title: String,
     val year: Int?,
@@ -27,47 +23,65 @@ data class SimklMedia(
     val poster: String?
 )
 
-// Defines the API requests that the application can make
-interface SimklApiService{
-    // Sends request to BASE_URL/search/{type}
+interface SimklApiService {
     @Headers("User-Agent: cst438project1/1.0")
     @GET("search/{type}")
     suspend fun searchMedia(
-        // Path replaces the {type} with "movie", "tv" or "anime"
         @Path("type") type: String,
-
-        // Adds the search text as the "q"
         @Query("q") query: String,
-
-        // Adds the API client ID as the "client_id"
         @Query("client_id") clientId: String,
-        // Identifies this Android app to SIMKL.
         @Query("app-name") appName: String = SimklClient.APP_NAME,
-
-        // Sends the app version required by the SIMKL search API.
         @Query("app-version") appVersion: String = SimklClient.APP_VERSION
     ): List<SimklMedia>
 }
 
-// Creates and stores the API client
-object SimklClient{
+object SimklClient {
     private const val BASE_URL = "https://api.simkl.com/"
     const val CLIENT_ID = "f0ed39a21b7a9c850615b0b9180fb4ae8fdd92c48a931c66e859a55ec16e25a2"
     const val APP_NAME = "cst438project1"
     const val APP_VERSION = "1.0"
 
-    // Creates the API service when it is used for the first time
-    // "by lazy" prevents Retrofit from being initialized unnecessarily
-    // (thanks for the fix Claude!)
-    val api: SimklApiService by lazy{
+    val api: SimklApiService by lazy {
         Retrofit.Builder()
-            // Tells Retrofit where the API is
             .baseUrl(BASE_URL)
-            // JSON responses are turned into data classes (SimklMedia/Ids)
             .addConverterFactory(GsonConverterFactory.create())
-            // Creates the object
             .build()
-            // Generates the implementation of the API
             .create(SimklApiService::class.java)
+    }
+}
+
+// Lucky Search: the API has no built-in "random" endpoint,
+// so this picks a random term/type and queries the real API, then picks a random result.
+
+private val LUCKY_SEARCH_TERMS = listOf(
+    "batman", "friends", "naruto", "inception", "the office",
+    "attack on titan", "star wars", "breaking bad", "spirited away", "the matrix"
+)
+
+private val LUCKY_MEDIA_TYPES = listOf("movie", "tv", "anime")
+
+val PLACEHOLDER_SUGGESTION = SimklMedia(
+    title = "Mystery Movie Night (placeholder for now)",
+    year = null,
+    ids = null,
+    poster = null
+)
+
+object LuckySearch {
+    suspend fun getRandomSuggestion(): SimklMedia {
+        return try {
+            val randomType = LUCKY_MEDIA_TYPES.random()
+            val randomTerm = LUCKY_SEARCH_TERMS.random()
+
+            val results = SimklClient.api.searchMedia(
+                type = randomType,
+                query = randomTerm,
+                clientId = SimklClient.CLIENT_ID
+            )
+
+            results.randomOrNull() ?: PLACEHOLDER_SUGGESTION
+        } catch (e: Exception) {
+            PLACEHOLDER_SUGGESTION
+        }
     }
 }
