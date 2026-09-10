@@ -7,6 +7,7 @@ import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.entities.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.cst438project1.database.entities.MediaRating
 
 class MediaRepository private constructor(application: Application) {
 
@@ -68,6 +69,36 @@ class MediaRepository private constructor(application: Application) {
         }
     }
 
+    // Saves a user's rating in the database
+    fun saveRating(
+        mediaTitle: String,
+        username: String,
+        rating: Int
+    ) {
+        // Runs the database operation in the background
+        MediaDatabase.databaseWriteExecutor.execute {
+            mediaDAO.saveRating(
+                MediaRating(
+                    mediaTitle = mediaTitle,
+                    username = username,
+                    rating = rating
+                )
+            )
+        }
+    }
+
+    // Gets the average rating for a media item
+    fun getAverageRating(mediaTitle: String): LiveData<Double?> {
+        return mediaDAO.getAverageRating(mediaTitle)
+    }
+
+    // Gets one user's rating
+    fun getUserRating(
+        mediaTitle: String,
+        username: String
+    ): LiveData<Int?> {
+        return mediaDAO.getUserRating(mediaTitle, username)
+    }
     companion object {
         @Volatile
         private var repository: MediaRepository? = null
