@@ -7,9 +7,10 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.Converters
+import com.example.cst438project1.database.entities.MediaRating
 import java.util.concurrent.Executors
 
-@Database(entities = [MediaItem::class], version = 1, exportSchema = false)
+@Database(entities = [MediaItem::class, MediaRating::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class MediaDatabase : RoomDatabase(){
 
@@ -35,7 +36,9 @@ abstract class MediaDatabase : RoomDatabase(){
                     context.applicationContext,
                     MediaDatabase::class.java,
                     "media_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    .build()
 
                 // Saves the created database
                 INSTANCE = instance

@@ -15,12 +15,25 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.cst438project1.database.MediaRepository
 
 @Composable
 fun LandingScreen(
     username: String,
     onLogout: () -> Unit
 ) {
+    // Gets the application context
+    val context = LocalContext.current
+
+    // Creates the media repository
+    val mediaRepository = remember {
+        MediaRepository.getRepository(
+            context.applicationContext as android.app.Application
+        )
+    }
+
     // --- Search feature state ---
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<SimklMedia>>(emptyList()) }
@@ -170,17 +183,68 @@ fun LandingScreen(
                             items = searchResults,
                             key = { media -> "${media.title}-${media.year}-${media.ids?.simkl}" }
                         ) { media ->
+
+                            // Gets the average rating for this media
+                            val averageRating by remember(media.title) {
+                                mediaRepository.getAverageRating(media.title)
+                            }.observeAsState()
+
+                            // Gets this user's rating
+                            val userRating by remember(media.title, username) {
+                                mediaRepository.getUserRating(
+                                    media.title,
+                                    username
+                                )
+                            }.observeAsState()
+
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(text = media.title, style = MaterialTheme.typography.titleMedium)
                                     Text("Year: ${media.year ?: "Unknown"}")
+
+                                    // Allows the user to select a rating
+                                    Text("Your rating:")
+
+                                    StarRating(
+                                        rating = userRating ?: 0,
+                                        onRatingSelected = { selectedRating ->
+
+                                            // Saves the user's selected rating
+                                            mediaRepository.saveRating(
+                                                mediaTitle = media.title,
+                                                username = username,
+                                                rating = selectedRating
+                                            )
+                                        }
+                                    )
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+// Displays five selectable stars
+@Composable
+fun StarRating(
+    rating: Int,
+    onRatingSelected: (Int) -> Unit
+) {
+    Row {
+        for (star in 1..5) {
+            TextButton(
+                onClick = {
+                    // Saves the selected star number
+                    onRatingSelected(star)
+                }
+            ) {
+                Text(
+                    text = if (star <= rating) "★" else "☆"
+                )
             }
         }
     }
