@@ -20,7 +20,8 @@ data class SimklMedia(
     val title: String,
     val year: Int?,
     val ids: SimklIds?,
-    val poster: String?
+    val poster: String?,
+    val overview: String?
 )
 
 interface SimklApiService {
@@ -31,7 +32,9 @@ interface SimklApiService {
         @Query("q") query: String,
         @Query("client_id") clientId: String,
         @Query("app-name") appName: String = SimklClient.APP_NAME,
-        @Query("app-version") appVersion: String = SimklClient.APP_VERSION
+        @Query("app-version") appVersion: String = SimklClient.APP_VERSION,
+        // Requests overview text for the media-information popup.
+        @Query("extended") extended: String = "full"
     ): List<SimklMedia>
 }
 
@@ -64,7 +67,8 @@ val PLACEHOLDER_SUGGESTION = SimklMedia(
     title = "Mystery Movie Night (placeholder for now)",
     year = null,
     ids = null,
-    poster = null
+    poster = null,
+    overview = null
 )
 
 object LuckySearch {
