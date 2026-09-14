@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
+    id("pmd")
 }
 
 android {
@@ -42,6 +43,11 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+}
+pmd {
+    toolVersion = "7.0.0"
+    ruleSetFiles = files("$rootDir/config/pmd/ruleset.xml")
+    isIgnoreFailures = false
 }
 
 dependencies {
