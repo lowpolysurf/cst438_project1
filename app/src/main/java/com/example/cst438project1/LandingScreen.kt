@@ -344,6 +344,7 @@ private fun MediaInfoDialog(
                      *
                      * Add an OutlinedTextField here for entering a comment, followed by a LazyColumn
                      * that displays submitted comments for this media item. This section is intentionally
+                     * Entity → DAO → Repository → UI) this is the steps needed to get comments to work
                      * not implemented yet.
                      */
                 }
