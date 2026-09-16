@@ -1,5 +1,5 @@
 package com.example.cst438project1.database.entities
-// imports will be used soon
+
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
