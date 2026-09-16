@@ -53,7 +53,7 @@ interface MediaDAO{
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun addToWatchlist(item: WatchlistItem)
 
-    @Query("DELETE FROM watchlist_table WHERE mediaTitle = :mediaTitle AND username ORDER BY mediaTitle")
+    @Query("DELETE FROM watchlist_table WHERE mediaTitle = :mediaTitle AND username = :username")
     fun removeFromWatchlist(mediaTitle: String, username: String)
 
     // Returns only the requesting user's own saved mediaItems
