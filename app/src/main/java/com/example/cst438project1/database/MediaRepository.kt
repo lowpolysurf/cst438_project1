@@ -3,11 +3,14 @@ package com.example.cst438project1.database
 import android.app.Application
 import androidx.lifecycle.LiveData
 import com.example.cst438project1.SimklClient
+import com.example.cst438project1.SimklMedia
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.entities.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.cst438project1.database.entities.MediaRating
+import com.example.cst438project1.database.entities.User
+import com.example.cst438project1.database.entities.WatchlistItem
 
 class MediaRepository private constructor(application: Application) {
 
@@ -34,7 +37,6 @@ class MediaRepository private constructor(application: Application) {
     suspend fun fetchAndSaveFromSimkl(query: String, type: String) {
         // Dispatchers.IO is used for network and database work (Thanks, Claude)
         withContext(Dispatchers.IO) {
-
             // Calls the search API
             val results = SimklClient.api.searchMedia(
                 type = type,
@@ -99,6 +101,30 @@ class MediaRepository private constructor(application: Application) {
     ): LiveData<Int?> {
         return mediaDAO.getUserRating(mediaTitle, username)
     }
+
+    // Add a search result to this user's watchlist
+    fun addToWatchlist(media: SimklMedia, username: String){
+        MediaDatabase.databaseWriteExecutor.execute{
+            mediaDAO.addToWatchlist(
+                WatchlistItem(
+                    mediaTitle = media.title,
+                    username = username,
+                    year = media.year,
+                    imageUrl = media.poster?.let{"https://simkl.in/posters/${it}_m.jpg"},
+                    externalId = media.ids?.simkl?.toString()
+                )
+            )
+        }
+    }
+
+    fun removeFromWatchlist(mediaTitle: String, username: String){
+        MediaDatabase.databaseWriteExecutor.execute{
+            mediaDAO.removeFromWatchlist(mediaTitle, username)
+        }
+    }
+
+    fun getWatchlistForUser(username: String): LiveData<List<WatchlistItem>> =
+        mediaDAO.getWatchlistForUser(username)
     companion object {
         @Volatile
         private var repository: MediaRepository? = null
