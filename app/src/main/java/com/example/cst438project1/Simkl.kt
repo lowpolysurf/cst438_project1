@@ -33,6 +33,7 @@ interface SimklApiService {
         @Query("client_id") clientId: String,
         @Query("app-name") appName: String = SimklClient.APP_NAME,
         @Query("app-version") appVersion: String = SimklClient.APP_VERSION,
+        // Requests overview text for the media-information popup.
         @Query("extended") extended: String = "full"
     ): List<SimklMedia>
 }

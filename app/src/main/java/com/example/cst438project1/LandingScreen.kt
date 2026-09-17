@@ -49,7 +49,7 @@ fun LandingScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var searchError by rememberSaveable { mutableStateOf<String?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
-    var selectedMedia by remember { mutableStateOf<SimklMedia?>(null)}
+    var selectedMedia by remember { mutableStateOf<SimklMedia?>(null) }
 
     // --- Lucky Search feature state ---
     var isLuckyLoading by remember { mutableStateOf(false) }
@@ -225,7 +225,8 @@ fun LandingScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
-                                    .clickable{ selectedMedia = media}
+                                    // Opens the media-information popup when the listing itself is selected.
+                                    .clickable { selectedMedia = media }
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(text = media.title, style = MaterialTheme.typography.titleMedium)
@@ -268,19 +269,11 @@ fun LandingScreen(
         }
     }
 
-    selectedMedia?.let{ media->
+    // Media-information popup: shown for the selected search result.
+    selectedMedia?.let { media ->
         MediaInfoDialog(
             media = media,
-            isInWatchlist = watchlistTitles.contains(media.title),
-            onToggleWatchlist = {
-                if(watchlistTitles.contains(media.title)){
-                    mediaRepository.removeFromWatchlist(media.title, username)
-                }
-                else{
-                    mediaRepository.addToWatchlist(media, username)
-                }
-            },
-            onDismiss = {selectedMedia = null}
+            onDismiss = { selectedMedia = null }
         )
     }
 }
@@ -288,10 +281,9 @@ fun LandingScreen(
 @Composable
 private fun MediaInfoDialog(
     media: SimklMedia,
-    isInWatchlist: Boolean,
-    onToggleWatchlist: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Large modal surface: uses most of the screen while keeping the search screen visible behind it.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -304,6 +296,7 @@ private fun MediaInfoDialog(
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                // Popup header: labels the dialog and provides an exit button at the top right.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -318,6 +311,7 @@ private fun MediaInfoDialog(
                     }
                 }
 
+                // Scrollable dialog content: keeps long descriptions accessible.
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -325,6 +319,7 @@ private fun MediaInfoDialog(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
+                        // Media detail row: displays the poster on the left and metadata on the right.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.Top
@@ -340,28 +335,45 @@ private fun MediaInfoDialog(
                             Spacer(modifier = Modifier.width(16.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
+                                // Title display: taken directly from the selected SIMKL media object.
                                 Text(
                                     text = media.title,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
+
+                                // Year display: taken directly from the selected SIMKL media object.
                                 Text("Year: ${media.year ?: "Unknown"}")
+
                                 Spacer(modifier = Modifier.height(12.dp))
+
+                                // Description display: populated by the overview in the full SIMKL response.
                                 Text(media.overview ?: "No description is currently available for this media.")
                             }
                         }
                     }
 
                     item {
+                        // Add-to-list button: intentionally left unconnected until list-saving behavior is defined.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Button(onClick = onToggleWatchlist) {
-                                Text(if (isInWatchlist) "Remove from Watchlist" else "Add to List")
+                            Button(onClick = {
+                                // TODO: Save the selected media to the user's list.
+                            }) {
+                                Text("Add to List")
                             }
                         }
                     }
+
+                    /*
+                     * TODO: Future comment section
+                     *
+                     * Add an OutlinedTextField here for entering a comment, followed by a LazyColumn
+                     * that displays submitted comments for this media item. This section is intentionally
+                     * not implemented yet.
+                     */
                 }
             }
         }
@@ -374,6 +386,7 @@ private fun MediaPoster(
     title: String,
     modifier: Modifier = Modifier
 ) {
+    // Loads the poster URL from the SIMKL media object's poster path without changing app state.
     val posterBitmap by produceState<Bitmap?>(initialValue = null, posterPath) {
         value = posterPath?.takeIf { it.isNotBlank() }?.let { path ->
             withContext(Dispatchers.IO) {
@@ -387,12 +400,14 @@ private fun MediaPoster(
     }
 
     if (posterBitmap != null) {
+        // Poster image: displays the remote image associated with the selected media object.
         Image(
             bitmap = posterBitmap!!.asImageBitmap(),
             contentDescription = "Poster for $title",
             modifier = modifier
         )
     } else {
+        // Poster placeholder: shown when SIMKL does not provide an image or it cannot be loaded.
         Surface(
             modifier = modifier,
             color = MaterialTheme.colorScheme.surfaceVariant
