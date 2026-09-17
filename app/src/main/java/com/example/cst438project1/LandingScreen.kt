@@ -220,14 +220,42 @@ fun LandingScreen(
                 }
 
                 luckySuggestion?.let { media ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = media.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedMedia = media
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            // Displays the Lucky media image
+                            MediaPoster(
+                                posterPath = media.poster,
+                                title = media.title,
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(120.dp)
                             )
-                            media.year?.let { year -> Text(text = "Year: $year") }
+
+                            Column(
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                // Displays the Lucky media title
+                                Text(
+                                    text = media.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text("Year: ${media.year ?: "Unknown"}")
+
+                                // Displays the Lucky media type
+                                Text(
+                                    text = "Type: ${media.mediaType ?: "Unknown"}"
+                                )
+                            }
                         }
                     }
                 }
@@ -301,6 +329,7 @@ fun LandingScreen(
                                 else "Search results will appear here."
                             )
                         }
+
                         else -> items(
                             items = searchResults,
                             key = { media -> "${media.title}-${media.year}-${media.ids?.simkl}" }
@@ -318,33 +347,57 @@ fun LandingScreen(
                                     username
                                 )
                             }.observeAsState()
-
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
-                                    // Opens the media-information popup when the listing itself is selected.
-                                    .clickable { selectedMedia = media }
+                                    .clickable {
+                                        selectedMedia = media
+                                    }
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(text = media.title, style = MaterialTheme.typography.titleMedium)
-                                    Text("Year: ${media.year ?: "Unknown"}")
-
-                                    // Allows the user to select a rating
-                                    Text("Your rating:")
-
-                                    StarRating(
-                                        rating = userRating ?: 0,
-                                        onRatingSelected = { selectedRating ->
-
-                                            // Saves the user's selected rating
-                                            mediaRepository.saveRating(
-                                                mediaTitle = media.title,
-                                                username = username,
-                                                rating = selectedRating
-                                            )
-                                        }
+                                Row(
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    // Displays the searched media image
+                                    MediaPoster(
+                                        posterPath = media.poster,
+                                        title = media.title,
+                                        modifier = Modifier
+                                            .width(90.dp)
+                                            .height(120.dp)
                                     )
+
+                                    Column(
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    ) {
+                                        // Displays the searched media title
+                                        Text(
+                                            text = media.title,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+
+                                        Text("Year: ${media.year ?: "Unknown"}")
+
+                                        // Displays the searched media type
+                                        Text(
+                                            text = "Type: ${media.mediaType ?: "Unknown"}"
+                                        )
+
+                                        // Allows the user to select a rating
+                                        Text("Your rating:")
+
+                                        StarRating(
+                                            rating = userRating ?: 0,
+                                            onRatingSelected = { selectedRating ->
+                                                // Saves the user's selected rating
+                                                mediaRepository.saveRating(
+                                                    mediaTitle = media.title,
+                                                    username = username,
+                                                    rating = selectedRating
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
