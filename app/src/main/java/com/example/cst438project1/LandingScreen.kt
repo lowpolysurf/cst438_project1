@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +49,14 @@ fun LandingScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var searchError by rememberSaveable { mutableStateOf<String?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
+    // Stores the recommendations displayed on the landing screen
+    var recommendationResults by remember {
+        mutableStateOf<List<SimklMedia>>(emptyList())
+    }
+
+    var isLoadingRecommendations by rememberSaveable {
+        mutableStateOf(false)
+    }
     var selectedMedia by remember { mutableStateOf<SimklMedia?>(null) }
 
     // --- Lucky Search feature state ---
@@ -55,6 +64,57 @@ fun LandingScreen(
     var luckySuggestion by remember { mutableStateOf<SimklMedia?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        isLoadingRecommendations = true
+
+        try {
+            recommendationResults = withContext(Dispatchers.IO) {
+
+                // Keeps each search title connected to its media type
+                val recommendationSearches = listOf(
+                    "inception" to "movie",
+                    "breaking bad" to "tv",
+                    "naruto" to "anime",
+                    "the matrix" to "movie",
+                    "friends" to "tv",
+                    "spirited away" to "anime"
+                )
+
+                // Randomly chooses three searches each time the screen opens
+                recommendationSearches
+                    .shuffled()
+                    .take(3)
+                    .map { recommendation ->
+                        async {
+                            val searchTerm = recommendation.first
+                            val mediaType = recommendation.second
+
+                            // Gets results from the Simkl API
+                            SimklClient.api.searchMedia(
+                                type = mediaType,
+                                query = searchTerm,
+                                clientId = SimklClient.CLIENT_ID
+                            ).map { media ->
+
+                                // Keeps the correct type with each result
+                                media.copy(mediaType = mediaType)
+                            }
+                        }
+                    }
+                    .awaitAll()
+                    .flatten()
+                    .distinctBy {
+
+                        // Removes duplicate media
+                        "${it.title}-${it.year}-${it.ids?.simkl}"
+                    }
+                    .shuffled()
+                    .take(5)
+            }
+        } finally {
+            isLoadingRecommendations = false
+        }
+    }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -116,7 +176,10 @@ fun LandingScreen(
                                                         type = type,
                                                         query = query,
                                                         clientId = SimklClient.CLIENT_ID
-                                                    )
+                                                    ).map { media ->
+
+                                                        media.copy(mediaType = type)
+                                                    }
                                                 }
                                             }
                                             .awaitAll()
@@ -165,6 +228,56 @@ fun LandingScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             media.year?.let { year -> Text(text = "Year: $year") }
+                        }
+                    }
+                }
+                if (isLoadingRecommendations) {
+                    CircularProgressIndicator()
+                }
+
+                if (recommendationResults.isNotEmpty()) {
+                    Text(
+                        text = "Recommendations",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Displays five randomly selected recommendations
+                        items(recommendationResults) { media ->
+                            Card(
+                                modifier = Modifier
+                                    .width(180.dp)
+                                    .clickable {
+                                        // Opens the media information window
+                                        selectedMedia = media
+                                    }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    // Displays the media image
+                                    MediaPoster(
+                                        posterPath = media.poster,
+                                        title = media.title,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp)
+                                    )
+
+                                    // Displays the media title
+                                    Text(
+                                        text = media.title,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+
+                                    // Displays the correct media type
+                                    Text(
+                                        text = "Type: ${media.mediaType ?: "Unknown"}"
+                                    )
+                                }
+                            }
                         }
                     }
                 }

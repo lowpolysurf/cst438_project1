@@ -21,7 +21,8 @@ data class SimklMedia(
     val year: Int?,
     val ids: SimklIds?,
     val poster: String?,
-    val overview: String?
+    val overview: String?,
+    val mediaType: String? =null
 )
 
 interface SimklApiService {
