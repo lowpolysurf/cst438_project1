@@ -8,6 +8,9 @@ import com.example.cst438project1.database.entities.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.cst438project1.database.entities.MediaRating
+import com.example.cst438project1.database.entities.MediaComment
+
+
 
 class MediaRepository private constructor(application: Application) {
 
@@ -92,6 +95,7 @@ class MediaRepository private constructor(application: Application) {
         return mediaDAO.getAverageRating(mediaTitle)
     }
 
+
     // Gets one user's rating
     fun getUserRating(
         mediaTitle: String,
@@ -99,6 +103,29 @@ class MediaRepository private constructor(application: Application) {
     ): LiveData<Int?> {
         return mediaDAO.getUserRating(mediaTitle, username)
     }
+
+// function to add comments
+    fun addComment(
+        mediaTitle: String,
+        username: String,
+        comment: String
+    ) {
+        // connects to dao file and gets info from insert comment function
+        MediaDatabase.databaseWriteExecutor.execute {
+            mediaDAO.insertComment(
+                MediaComment(
+                    mediaTitle = mediaTitle,
+                    username = username,
+                    comment = comment
+                )
+            )
+        }
+    }
+// to retrieve comment data
+    fun getComments(mediaTitle: String): LiveData<List<MediaComment>> {
+        return mediaDAO.getComments(mediaTitle)
+    }
+
     companion object {
         @Volatile
         private var repository: MediaRepository? = null
