@@ -8,9 +8,11 @@ import androidx.room.TypeConverters
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.Converters
 import com.example.cst438project1.database.entities.MediaRating
+import com.example.cst438project1.database.entities.WatchlistItem
 import java.util.concurrent.Executors
 
-@Database(entities = [MediaItem::class, MediaRating::class], version = 2, exportSchema = false)
+@Database(entities = [MediaItem::class, MediaRating::class, WatchlistItem::class],
+    version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class MediaDatabase : RoomDatabase(){
 

@@ -58,7 +58,18 @@ class MainActivity : ComponentActivity() {
                             navController.navigate("login") {
                                 popUpTo(0)
                             }
+                        },
+                        onOpenWatchlist = {
+                            navController.navigate("watchlist/$username")
                         }
+                    )
+                }
+
+                composable("watchlist/{username}") { backStackEntry ->
+                    val username = backStackEntry.arguments?.getString("username") ?: "User"
+                    WatchlistScreen(
+                        username = username,
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }
