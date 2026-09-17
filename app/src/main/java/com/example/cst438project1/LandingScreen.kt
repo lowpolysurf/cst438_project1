@@ -254,7 +254,7 @@ fun LandingScreen(
 }
 
 @Composable
-private fun MediaInfoDialog(
+internal fun MediaInfoDialog(
     media: SimklMedia,
     username: String,
     mediaRepository: MediaRepository,
