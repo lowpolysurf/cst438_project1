@@ -21,7 +21,8 @@ data class SimklMedia(
     val year: Int?,
     val ids: SimklIds?,
     val poster: String?,
-    val overview: String?
+    val overview: String?,
+    val mediaType: String? =null
 )
 
 interface SimklApiService {
@@ -83,7 +84,9 @@ object LuckySearch {
                 clientId = SimklClient.CLIENT_ID
             )
 
-            results.randomOrNull() ?: PLACEHOLDER_SUGGESTION
+            // Saves the type used to find the Lucky result
+            results.randomOrNull()?.copy(mediaType = randomType)
+                ?: PLACEHOLDER_SUGGESTION
         } catch (e: Exception) {
             PLACEHOLDER_SUGGESTION
         }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +50,14 @@ fun LandingScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var searchError by rememberSaveable { mutableStateOf<String?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
+    // Stores the recommendations displayed on the landing screen
+    var recommendationResults by remember {
+        mutableStateOf<List<SimklMedia>>(emptyList())
+    }
+
+    var isLoadingRecommendations by rememberSaveable {
+        mutableStateOf(false)
+    }
     var selectedMedia by remember { mutableStateOf<SimklMedia?>(null) }
 
     // --- Lucky Search feature state ---
@@ -56,6 +65,57 @@ fun LandingScreen(
     var luckySuggestion by remember { mutableStateOf<SimklMedia?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        isLoadingRecommendations = true
+
+        try {
+            recommendationResults = withContext(Dispatchers.IO) {
+
+                // Keeps each search title connected to its media type
+                val recommendationSearches = listOf(
+                    "inception" to "movie",
+                    "breaking bad" to "tv",
+                    "naruto" to "anime",
+                    "the matrix" to "movie",
+                    "friends" to "tv",
+                    "spirited away" to "anime"
+                )
+
+                // Randomly chooses three searches each time the screen opens
+                recommendationSearches
+                    .shuffled()
+                    .take(3)
+                    .map { recommendation ->
+                        async {
+                            val searchTerm = recommendation.first
+                            val mediaType = recommendation.second
+
+                            // Gets results from the Simkl API
+                            SimklClient.api.searchMedia(
+                                type = mediaType,
+                                query = searchTerm,
+                                clientId = SimklClient.CLIENT_ID
+                            ).map { media ->
+
+                                // Keeps the correct type with each result
+                                media.copy(mediaType = mediaType)
+                            }
+                        }
+                    }
+                    .awaitAll()
+                    .flatten()
+                    .distinctBy {
+
+                        // Removes duplicate media
+                        "${it.title}-${it.year}-${it.ids?.simkl}"
+                    }
+                    .shuffled()
+                    .take(5)
+            }
+        } finally {
+            isLoadingRecommendations = false
+        }
+    }
 
     // Watchlist titles for this user, so cards know to show "Add" or "Remove"
     val watchlistItems by mediaRepository.getWatchlistForUser(username).observeAsState(emptyList())
@@ -129,7 +189,10 @@ fun LandingScreen(
                                                         type = type,
                                                         query = query,
                                                         clientId = SimklClient.CLIENT_ID
-                                                    )
+                                                    ).map { media ->
+
+                                                        media.copy(mediaType = type)
+                                                    }
                                                 }
                                             }
                                             .awaitAll()
@@ -170,14 +233,92 @@ fun LandingScreen(
                 }
 
                 luckySuggestion?.let { media ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = media.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedMedia = media
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            // Displays the Lucky media image
+                            MediaPoster(
+                                posterPath = media.poster,
+                                title = media.title,
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(120.dp)
                             )
-                            media.year?.let { year -> Text(text = "Year: $year") }
+
+                            Column(
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                // Displays the Lucky media title
+                                Text(
+                                    text = media.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text("Year: ${media.year ?: "Unknown"}")
+
+                                // Displays the Lucky media type
+                                Text(
+                                    text = "Type: ${media.mediaType ?: "Unknown"}"
+                                )
+                            }
+                        }
+                    }
+                }
+                if (isLoadingRecommendations) {
+                    CircularProgressIndicator()
+                }
+
+                if (recommendationResults.isNotEmpty()) {
+                    Text(
+                        text = "Recommendations",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Displays five randomly selected recommendations
+                        items(recommendationResults) { media ->
+                            Card(
+                                modifier = Modifier
+                                    .width(180.dp)
+                                    .clickable {
+                                        // Opens the media information window
+                                        selectedMedia = media
+                                    }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    // Displays the media image
+                                    MediaPoster(
+                                        posterPath = media.poster,
+                                        title = media.title,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp)
+                                    )
+
+                                    // Displays the media title
+                                    Text(
+                                        text = media.title,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+
+                                    // Displays the correct media type
+                                    Text(
+                                        text = "Type: ${media.mediaType ?: "Unknown"}"
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -201,6 +342,7 @@ fun LandingScreen(
                                 else "Search results will appear here."
                             )
                         }
+
                         else -> items(
                             items = searchResults,
                             key = { media -> "${media.title}-${media.year}-${media.ids?.simkl}" }
@@ -225,29 +367,52 @@ fun LandingScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
-                                    // Opens the media-information popup when the listing itself is selected.
-                                    .clickable { selectedMedia = media }
+                                    .clickable {
+                                        selectedMedia = media
+                                    }
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(text = media.title, style = MaterialTheme.typography.titleMedium)
-                                    Text("Year: ${media.year ?: "Unknown"}")
-
-                                    // Allows the user to select a rating
-                                    Text("Your rating:")
-
-                                    StarRating(
-                                        rating = userRating ?: 0,
-                                        onRatingSelected = { selectedRating ->
-
-                                            // Saves the user's selected rating
-                                            mediaRepository.saveRating(
-                                                mediaTitle = media.title,
-                                                username = username,
-                                                rating = selectedRating
-                                            )
-                                        }
+                                Row(
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    // Displays the searched media image
+                                    MediaPoster(
+                                        posterPath = media.poster,
+                                        title = media.title,
+                                        modifier = Modifier
+                                            .width(90.dp)
+                                            .height(120.dp)
                                     )
 
+                                    Column(
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    ) {
+                                        // Displays the searched media title
+                                        Text(
+                                            text = media.title,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+
+                                        Text("Year: ${media.year ?: "Unknown"}")
+
+                                        // Displays the searched media type
+                                        Text(
+                                            text = "Type: ${media.mediaType ?: "Unknown"}"
+                                        )
+
+                                        // Allows the user to select a rating
+                                        Text("Your rating:")
+
+                                        StarRating(
+                                            rating = userRating ?: 0,
+                                            onRatingSelected = { selectedRating ->
+                                                // Saves the user's selected rating
+                                                mediaRepository.saveRating(
+                                                    mediaTitle = media.title,
+                                                    username = username,
+                                                    rating = selectedRating
+                                                )
+                                            }
+                                        )
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     // Watchlist toggle button on every card
