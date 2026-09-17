@@ -31,7 +31,8 @@ import java.net.URL
 @Composable
 fun LandingScreen(
     username: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onOpenWatchlist: () -> Unit
 ) {
     // Gets the application context
     val context = LocalContext.current
@@ -116,6 +117,10 @@ fun LandingScreen(
         }
     }
 
+    // Watchlist titles for this user, so cards know to show "Add" or "Remove"
+    val watchlistItems by mediaRepository.getWatchlistForUser(username).observeAsState(emptyList())
+    val watchlistTitles = remember(watchlistItems) {watchlistItems.map{ it.mediaTitle }.toSet()}
+
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -132,6 +137,14 @@ fun LandingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = username, modifier = Modifier.weight(1f))
+
+                    // Opens WatchlistScreen for this user
+                    TextButton(onClick = onOpenWatchlist) {
+                        Text("My Watchlist")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Button(onClick = onLogout) {
                         Text("Log Out")
                     }
@@ -347,6 +360,9 @@ fun LandingScreen(
                                     username
                                 )
                             }.observeAsState()
+
+                            val isInWatchlist = watchlistTitles.contains(media.title)
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -397,6 +413,17 @@ fun LandingScreen(
                                                 )
                                             }
                                         )
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Watchlist toggle button on every card
+                                    Button(onClick = {
+                                        if (isInWatchlist) {
+                                            mediaRepository.removeFromWatchlist(mediaTitle = media.title, username = username)
+                                        } else {
+                                            mediaRepository.addToWatchlist(media, username)
+                                        }
+                                    }) {
+                                        Text(if (isInWatchlist) "Remove from Watchlist" else "Add to Watchlist")
                                     }
                                 }
                             }
