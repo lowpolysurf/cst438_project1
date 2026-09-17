@@ -84,7 +84,9 @@ object LuckySearch {
                 clientId = SimklClient.CLIENT_ID
             )
 
-            results.randomOrNull() ?: PLACEHOLDER_SUGGESTION
+            // Saves the type used to find the Lucky result
+            results.randomOrNull()?.copy(mediaType = randomType)
+                ?: PLACEHOLDER_SUGGESTION
         } catch (e: Exception) {
             PLACEHOLDER_SUGGESTION
         }
