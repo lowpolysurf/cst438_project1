@@ -117,8 +117,8 @@ class MediaRepository private constructor(application: Application) {
         }
     }
 
-    fun removeFromWatchlist(mediaTitle: String, username: String){
-        MediaDatabase.databaseWriteExecutor.execute{
+    fun removeFromWatchlist(mediaTitle: String, username: String) {
+        MediaDatabase.databaseWriteExecutor.execute {
             mediaDAO.removeFromWatchlist(mediaTitle, username)
         }
     }

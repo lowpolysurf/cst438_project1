@@ -1,5 +1,9 @@
 package com.example.cst438project1
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,8 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,11 +25,13 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.LocalContext
 import com.example.cst438project1.database.MediaRepository
+import java.net.URL
 
 @Composable
 fun LandingScreen(
     username: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onOpenWatchlist: () -> Unit
 ) {
     // Gets the application context
     val context = LocalContext.current
@@ -40,12 +49,17 @@ fun LandingScreen(
     var isSearching by rememberSaveable { mutableStateOf(false) }
     var searchError by rememberSaveable { mutableStateOf<String?>(null) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
+    var selectedMedia by remember { mutableStateOf<SimklMedia?>(null)}
 
     // --- Lucky Search feature state ---
     var isLuckyLoading by remember { mutableStateOf(false) }
     var luckySuggestion by remember { mutableStateOf<SimklMedia?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    // Watchlist titles for this user, so cards know to show "Add" or "Remove"
+    val watchlistItems by mediaRepository.getWatchlistForUser(username).observeAsState(emptyList())
+    val watchlistTitles = remember(watchlistItems) {watchlistItems.map{ it.mediaTitle }.toSet()}
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -63,6 +77,14 @@ fun LandingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = username, modifier = Modifier.weight(1f))
+
+                    // Opens WatchlistScreen for this user
+                    TextButton(onClick = onOpenWatchlist) {
+                        Text("My Watchlist")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Button(onClick = onLogout) {
                         Text("Log Out")
                     }
@@ -197,8 +219,13 @@ fun LandingScreen(
                                 )
                             }.observeAsState()
 
+                            val isInWatchlist = watchlistTitles.contains(media.title)
+
                             Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable{ selectedMedia = media}
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(text = media.title, style = MaterialTheme.typography.titleMedium)
@@ -219,11 +246,159 @@ fun LandingScreen(
                                             )
                                         }
                                     )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Watchlist toggle button on every card
+                                    Button(onClick = {
+                                        if (isInWatchlist) {
+                                            mediaRepository.removeFromWatchlist(mediaTitle = media.title, username = username)
+                                        } else {
+                                            mediaRepository.addToWatchlist(media, username)
+                                        }
+                                    }) {
+                                        Text(if (isInWatchlist) "Remove from Watchlist" else "Add to Watchlist")
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    selectedMedia?.let{ media->
+        MediaInfoDialog(
+            media = media,
+            isInWatchlist = watchlistTitles.contains(media.title),
+            onToggleWatchlist = {
+                if(watchlistTitles.contains(media.title)){
+                    mediaRepository.removeFromWatchlist(media.title, username)
+                }
+                else{
+                    mediaRepository.addToWatchlist(media, username)
+                }
+            },
+            onDismiss = {selectedMedia = null}
+        )
+    }
+}
+
+@Composable
+private fun MediaInfoDialog(
+    media: SimklMedia,
+    isInWatchlist: Boolean,
+    onToggleWatchlist: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.88f),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Media Info",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("Exit")
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            MediaPoster(
+                                posterPath = media.poster,
+                                title = media.title,
+                                modifier = Modifier
+                                    .width(120.dp)
+                                    .height(180.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = media.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text("Year: ${media.year ?: "Unknown"}")
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(media.overview ?: "No description is currently available for this media.")
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Button(onClick = onToggleWatchlist) {
+                                Text(if (isInWatchlist) "Remove from Watchlist" else "Add to List")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaPoster(
+    posterPath: String?,
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    val posterBitmap by produceState<Bitmap?>(initialValue = null, posterPath) {
+        value = posterPath?.takeIf { it.isNotBlank() }?.let { path ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    URL("https://simkl.in/posters/${path}_m.jpg")
+                        .openStream()
+                        .use(BitmapFactory::decodeStream)
+                }.getOrNull()
+            }
+        }
+    }
+
+    if (posterBitmap != null) {
+        Image(
+            bitmap = posterBitmap!!.asImageBitmap(),
+            contentDescription = "Poster for $title",
+            modifier = modifier
+        )
+    } else {
+        Surface(
+            modifier = modifier,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text("No image")
             }
         }
     }
