@@ -456,6 +456,17 @@ fun LandingScreen(
     selectedMedia?.let { media ->
         MediaInfoDialog(
             media = media,
+            isInWatchlist = watchlistTitles.contains(media.title),
+            onToggleWatchlist = {
+                if (watchlistTitles.contains(media.title)) {
+                    mediaRepository.removeFromWatchlist(
+                        mediaTitle = media.title,
+                        username = username
+                    )
+                } else {
+                    mediaRepository.addToWatchlist(media, username)
+                }
+            },
             username = username,
             mediaRepository = mediaRepository,
             onDismiss = { selectedMedia = null }
@@ -466,6 +477,8 @@ fun LandingScreen(
 @Composable
 internal fun MediaInfoDialog(
     media: SimklMedia,
+    isInWatchlist: Boolean,
+    onToggleWatchlist: () -> Unit,
     username: String,
     mediaRepository: MediaRepository,
     onDismiss: () -> Unit
