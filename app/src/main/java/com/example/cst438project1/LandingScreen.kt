@@ -329,11 +329,6 @@ fun LandingScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Media List",
-                        modifier = Modifier.weight(1f)
-                    )
-
                     if (hasSearched) {
                         TextButton(onClick = {
                             searchQuery = ""
@@ -355,7 +350,7 @@ fun LandingScreen(
                         searchResults.isEmpty() -> item {
                             Text(
                                 if (hasSearched) "No matching media found."
-                                else "Search results will appear here."
+                                else ""
                             )
                         }
 
