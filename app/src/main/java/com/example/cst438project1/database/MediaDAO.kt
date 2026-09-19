@@ -5,6 +5,7 @@ import androidx.room.*
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.entities.MediaRating
 import com.example.cst438project1.database.entities.MediaComment
+import com.example.cst438project1.database.entities.WatchlistItem
 
 @Dao
 interface MediaDAO{
@@ -57,4 +58,18 @@ interface MediaDAO{
         mediaTitle: String,
         username: String
     ): LiveData<Int?>
+
+    // Watchlist
+
+    // Adds an item to user's watchlist (Ignored if already there)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun addToWatchlist(item: WatchlistItem)
+
+    @Query("DELETE FROM watchlist_table WHERE mediaTitle = :mediaTitle AND username = :username")
+    fun removeFromWatchlist(mediaTitle: String, username: String)
+
+    // Returns only the requesting user's own saved mediaItems
+    // This is what it is making private per user
+    @Query("SELECT * FROM watchlist_table WHERE username = :username ORDER BY mediaTitle")
+    fun getWatchlistForUser(username: String): LiveData<List<WatchlistItem>>
 }

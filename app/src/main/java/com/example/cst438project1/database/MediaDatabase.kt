@@ -8,11 +8,14 @@ import androidx.room.TypeConverters
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.Converters
 import com.example.cst438project1.database.entities.MediaRating
+
+
 import com.example.cst438project1.database.entities.MediaComment
+import com.example.cst438project1.database.entities.WatchlistItem
 import java.util.concurrent.Executors
 
-// room needs version to update to version 3 because a new class was added
-@Database(entities = [MediaItem::class, MediaRating::class, MediaComment::class], version = 3, exportSchema = false)
+// room needs version to update to version 3 because new classes were added
+@Database(entities = [MediaItem::class, MediaRating::class, MediaComment::class, WatchlistItem::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class MediaDatabase : RoomDatabase(){
 
