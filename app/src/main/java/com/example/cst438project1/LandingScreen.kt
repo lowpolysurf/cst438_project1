@@ -452,27 +452,22 @@ fun LandingScreen(
     }
 
     // Media-information popup: shown for the selected search result.
+    // added some vars to connect username , media and media repository
     selectedMedia?.let { media ->
         MediaInfoDialog(
             media = media,
-            isInWatchlist = watchlistTitles.contains(media.title),
-            onToggleWatchlist = {
-                if (watchlistTitles.contains(media.title)) {
-                    mediaRepository.removeFromWatchlist(mediaTitle = media.title, username = username)
-                } else {
-                    mediaRepository.addToWatchlist(media, username)
-                }
-            },
+            username = username,
+            mediaRepository = mediaRepository,
             onDismiss = { selectedMedia = null }
         )
     }
 }
 
 @Composable
-private fun MediaInfoDialog(
+internal fun MediaInfoDialog(
     media: SimklMedia,
-    isInWatchlist: Boolean,
-    onToggleWatchlist: () -> Unit,
+    username: String,
+    mediaRepository: MediaRepository,
     onDismiss: () -> Unit
 ) {
     // Large modal surface: uses most of the screen while keeping the search screen visible behind it.
@@ -503,6 +498,10 @@ private fun MediaInfoDialog(
                     }
                 }
 
+                // Comments for this media item; observeAsState keeps the list live as new ones are added.
+                val comments by remember(media.title) {
+                    mediaRepository.getComments(media.title)
+                }.observeAsState(initial = emptyList())
                 // Scrollable dialog content: keeps long descriptions accessible.
                 LazyColumn(
                     modifier = Modifier
@@ -562,8 +561,48 @@ private fun MediaInfoDialog(
                      *
                      * Add an OutlinedTextField here for entering a comment, followed by a LazyColumn
                      * that displays submitted comments for this media item. This section is intentionally
+                     * Entity → DAO → Repository → UI) this is the steps needed to get comments to work
                      * not implemented yet.
                      */
+                    item {
+                        // Comment input: lets the user type and submit a new comment for this media item.
+                        var commentText by remember { mutableStateOf("") }
+
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = commentText,
+                                onValueChange = { commentText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("Add a comment") }
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Button(
+                                onClick = {
+                                    mediaRepository.addComment(
+                                        mediaTitle = media.title,
+                                        username = username,
+                                        comment = commentText
+                                    )
+                                    commentText = ""
+                                }
+                            ) {
+                                Text("Post Comment")
+                            }
+                        }
+                    }
+
+                    items(
+                        items = comments,
+                        key = { it.id }
+                    ) { comment ->
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Text(text = comment.username, fontWeight = FontWeight.Bold)
+                            Text(text = comment.comment)
+                        }
+                    }
+
                 }
             }
         }

@@ -9,6 +9,9 @@ import com.example.cst438project1.database.entities.MediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.cst438project1.database.entities.MediaRating
+import com.example.cst438project1.database.entities.MediaComment
+
+
 import com.example.cst438project1.database.entities.User
 import com.example.cst438project1.database.entities.WatchlistItem
 
@@ -94,12 +97,35 @@ class MediaRepository private constructor(application: Application) {
         return mediaDAO.getAverageRating(mediaTitle)
     }
 
+
     // Gets one user's rating
     fun getUserRating(
         mediaTitle: String,
         username: String
     ): LiveData<Int?> {
         return mediaDAO.getUserRating(mediaTitle, username)
+    }
+
+// function to add comments
+    fun addComment(
+        mediaTitle: String,
+        username: String,
+        comment: String
+    ) {
+        // connects to dao file and gets info from insert comment function
+        MediaDatabase.databaseWriteExecutor.execute {
+            mediaDAO.insertComment(
+                MediaComment(
+                    mediaTitle = mediaTitle,
+                    username = username,
+                    comment = comment
+                )
+            )
+        }
+    }
+// to retrieve comment data
+    fun getComments(mediaTitle: String): LiveData<List<MediaComment>> {
+        return mediaDAO.getComments(mediaTitle)
     }
 
     // Add a search result to this user's watchlist
