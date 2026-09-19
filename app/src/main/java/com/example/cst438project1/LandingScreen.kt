@@ -118,7 +118,7 @@ fun LandingScreen(
     }
 
     // Watchlist titles for this user, so cards know to show "Add" or "Remove"
-    val watchlistItems by mediaRepository.getWatchlistForUser(username).observeAsState(emptyList())
+    val watchlistItems by remember(username) { mediaRepository.getWatchlistForUser(username) }.observeAsState(emptyList())
     val watchlistTitles = remember(watchlistItems) {watchlistItems.map{ it.mediaTitle }.toSet()}
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -276,7 +276,7 @@ fun LandingScreen(
                     CircularProgressIndicator()
                 }
 
-                if (recommendationResults.isNotEmpty()) {
+                if (recommendationResults.isNotEmpty() && !hasSearched) {
                     Text(
                         text = "Recommendations",
                         style = MaterialTheme.typography.titleMedium
@@ -323,12 +323,28 @@ fun LandingScreen(
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                Text(
-                    text = "Media List",
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Media List",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    if (hasSearched) {
+                        TextButton(onClick = {
+                            searchQuery = ""
+                            searchResults = emptyList()
+                            searchError = null
+                            hasSearched = false
+                        }) {
+                            Text("Back to Recommendations")
+                        }
+                    }
+                }
 
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth().weight(1f)
@@ -413,6 +429,7 @@ fun LandingScreen(
                                                 )
                                             }
                                         )
+                                    }
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     // Watchlist toggle button on every card
@@ -528,15 +545,13 @@ internal fun MediaInfoDialog(
                     }
 
                     item {
-                        // Add-to-list button: intentionally left unconnected until list-saving behavior is defined.
+                        // Watchlist toggle button, matching the one on each search-result card.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Button(onClick = {
-                                // TODO: Save the selected media to the user's list.
-                            }) {
-                                Text("Add to List")
+                            Button(onClick = onToggleWatchlist) {
+                                Text(if (isInWatchlist) "Remove from Watchlist" else "Add to Watchlist")
                             }
                         }
                     }
