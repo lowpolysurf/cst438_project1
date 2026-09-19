@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.*
 import com.example.cst438project1.database.entities.MediaItem
 import com.example.cst438project1.database.entities.MediaRating
+import com.example.cst438project1.database.entities.MediaComment
 import com.example.cst438project1.database.entities.WatchlistItem
 
 @Dao
@@ -33,6 +34,17 @@ interface MediaDAO{
     // Replaces the old rating if the user already rated this media
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun saveRating(rating: MediaRating)
+
+
+    // Returns all comments for a media item, newest first
+    // LiveData  will update automatically when a new comment is left by user
+    @Query("SELECT * FROM comment_table WHERE mediaTitle = :mediaTitle ORDER BY timestamp DESC")
+    fun getComments(mediaTitle: String): LiveData<List<MediaComment>>
+
+
+    // Saves a new comment
+    @Insert
+    fun insertComment(comment: MediaComment)
 
     // Calculates the average rating for a media item
     // Returns null when there are no ratings
