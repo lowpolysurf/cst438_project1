@@ -13,7 +13,7 @@ However, we were not able to fully implement the books or genre-search features.
 1. [Specific thing, and why it helped]
 
 ## What went wrong
-1. [Specific thing] - Cause: [why it actually happened]
+1. [Missing Media Descriptions] - Cause: [Our API didn't have the description for the media items, and we only noticed that later than we should've]
 
 ## Advice to our next teams
 1. [What you would tell the team you are about to join]
